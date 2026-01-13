@@ -159,4 +159,3 @@ function* generateTemplateDirectives(
     yield `type ${names.LocalDirectives}!: ${types.length ? types.join(` & `) : `{}`}${endOfLine}`;
     yield `let ${names.directives}!: ${names.LocalDirectives} & import("${vueCompilerOptions.lib}").GlobalDirectives${endOfLine}`;
 }
-

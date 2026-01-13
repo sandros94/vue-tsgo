@@ -1,6 +1,6 @@
 import CompilerDOM from "@vue/compiler-dom";
 import type { SFCBlock, SFCDescriptor, SFCParseResult, SFCScriptBlock, SFCStyleBlock, SFCTemplateBlock } from "@vue/compiler-sfc";
-import { getAttributeValueOffset } from "./utils";
+import { getAttributeValueOffset } from "../shared";
 import type { IRBlockAttr } from "./ir";
 
 declare module "@vue/compiler-sfc" {

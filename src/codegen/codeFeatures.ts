@@ -1,6 +1,7 @@
 import type { CodeInformation } from "../types";
 
 const raw = {
+    none: {},
     verification: {
         verification: true,
     },

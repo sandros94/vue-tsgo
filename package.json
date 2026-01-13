@@ -28,10 +28,12 @@
     "@vue/shared": "catalog:",
     "muggle-string": "catalog:",
     "oxc-parser": "catalog:",
-    "oxc-walker": "catalog:"
+    "oxc-walker": "catalog:",
+    "picomatch": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/picomatch": "catalog:",
     "@vue/compiler-sfc": "catalog:",
     "@vue/language-core": "catalog:",
     "@zinkawaii/eslint-config": "catalog:",

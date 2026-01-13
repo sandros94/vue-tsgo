@@ -1,0 +1,132 @@
+import CompilerDOM from "@vue/compiler-dom";
+import { hyphenateTag } from "../../shared";
+import { codeFeatures } from "../codeFeatures";
+import { endOfLine } from "../utils";
+import { generateComponent, generateElement, generateFragment } from "./element";
+import { generateInterpolation } from "./interpolation";
+import { generateSlotOutlet } from "./slotOutlet";
+import { generateVFor } from "./vFor";
+import { generateVIf } from "./vIf";
+import { generateVSlot } from "./vSlot";
+import type { Code } from "../../types";
+import type { TemplateCodegenContext } from "./context";
+import type { TemplateCodegenOptions } from "./index";
+
+export function* generateTemplateChild(
+    options: TemplateCodegenOptions,
+    ctx: TemplateCodegenContext,
+    node: CompilerDOM.RootNode | CompilerDOM.TemplateChildNode | CompilerDOM.SimpleExpressionNode,
+    enterNode = true,
+    isVForChild = false,
+): Generator<Code> {
+    if (enterNode && !ctx.enter(node)) {
+        return;
+    }
+
+    if (node.type === CompilerDOM.NodeTypes.ROOT) {
+        for (const item of collectSingleRootNodes(options, node.children)) {
+            ctx.singleRootNodes.add(item);
+        }
+        for (const child of node.children) {
+            yield* generateTemplateChild(options, ctx, child);
+        }
+    }
+    else if (node.type === CompilerDOM.NodeTypes.ELEMENT) {
+        if (node.tagType === CompilerDOM.ElementTypes.SLOT) {
+            yield* generateSlotOutlet(options, ctx, node);
+        }
+        else {
+            const slotDir = node.props.find(CompilerDOM.isVSlot);
+            if (node.tagType === CompilerDOM.ElementTypes.TEMPLATE && ctx.components.length && slotDir) {
+                yield* generateVSlot(options, ctx, node, slotDir, ctx.components.at(-1)!());
+            }
+            else if (node.tagType === CompilerDOM.ElementTypes.TEMPLATE && isVForChild) {
+                yield* generateFragment(options, ctx, node);
+            }
+            else if (node.tagType === CompilerDOM.ElementTypes.COMPONENT) {
+                yield* generateComponent(options, ctx, node);
+            }
+            else {
+                yield* generateElement(options, ctx, node);
+            }
+        }
+    }
+    else if (node.type === CompilerDOM.NodeTypes.COMPOUND_EXPRESSION) {
+        for (const child of node.children) {
+            if (typeof child === "object") {
+                yield* generateTemplateChild(options, ctx, child, false);
+            }
+        }
+    }
+    else if (node.type === CompilerDOM.NodeTypes.INTERPOLATION) {
+        const [content, offset] = parseInterpolationNode(node, options.template.content);
+        yield* generateInterpolation(
+            options,
+            ctx,
+            options.template,
+            content,
+            offset,
+            codeFeatures.verification,
+            `(`,
+            `)`,
+        );
+        yield endOfLine;
+    }
+    else if (node.type === CompilerDOM.NodeTypes.IF) {
+        yield* generateVIf(options, ctx, node);
+    }
+    else if (node.type === CompilerDOM.NodeTypes.FOR) {
+        yield* generateVFor(options, ctx, node);
+    }
+
+    if (enterNode) {
+        yield* ctx.exit();
+    }
+}
+
+function* collectSingleRootNodes(
+    options: TemplateCodegenOptions,
+    children: CompilerDOM.TemplateChildNode[],
+): Generator<CompilerDOM.ElementNode | null> {
+    // exclude the effect of comments on the root node
+    children = children.filter((node) => node.type !== CompilerDOM.NodeTypes.COMMENT);
+
+    if (children.length !== 1) {
+        // "null" is used to determine whether the component is not always has a single root
+        if (children.length > 1) {
+            yield null;
+        }
+        return;
+    }
+
+    const child = children[0];
+    if (child.type === CompilerDOM.NodeTypes.IF) {
+        for (const branch of child.branches) {
+            yield* collectSingleRootNodes(options, branch.children);
+        }
+        return;
+    }
+    else if (child.type !== CompilerDOM.NodeTypes.ELEMENT) {
+        return;
+    }
+    yield child;
+
+    const tag = hyphenateTag(child.tag);
+    if (options.vueCompilerOptions.fallthroughComponentNames.includes(tag)) {
+        yield* collectSingleRootNodes(options, child.children);
+    }
+}
+
+function parseInterpolationNode(node: CompilerDOM.InterpolationNode, template: string) {
+    let start = node.content.loc.start.offset;
+    let end = node.content.loc.end.offset;
+
+    while (template[start - 1]?.trim() === "") {
+        start--;
+    }
+    while (template[end]?.trim() === "") {
+        end++;
+    }
+
+    return [template.slice(start, end), start] as const;
+}

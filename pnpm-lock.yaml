@@ -9,6 +9,9 @@ catalogs:
     '@types/node':
       specifier: ^25.0.7
       version: 25.0.7
+    '@types/picomatch':
+      specifier: ^4.0.2
+      version: 4.0.2
     '@vue/compiler-dom':
       specifier: ^3.5.26
       version: 3.5.26
@@ -42,6 +45,9 @@ catalogs:
     oxc-walker:
       specifier: ^0.6.0
       version: 0.6.0
+    picomatch:
+      specifier: ^4.0.3
+      version: 4.0.3
     tsdown:
       specifier: ^0.19.0
       version: 0.19.0
@@ -68,10 +74,16 @@ importers:
       oxc-walker:
         specifier: 'catalog:'
         version: 0.6.0(oxc-parser@0.108.0)
+      picomatch:
+        specifier: 'catalog:'
+        version: 4.0.3
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 25.0.7
+      '@types/picomatch':
+        specifier: 'catalog:'
+        version: 4.0.2
       '@vue/compiler-sfc':
         specifier: 'catalog:'
         version: 3.5.26
@@ -829,6 +841,9 @@ packages:
 
   '@types/node@25.0.7':
     resolution: {integrity: sha512-C/er7DlIZgRJO7WtTdYovjIFzGsz0I95UlMyR9anTb4aCpBSRWe5Jc1/RvLKUfzmOxHPGjSE5+63HgLtndxU4w==}
+
+  '@types/picomatch@4.0.2':
+    resolution: {integrity: sha512-qHHxQ+P9PysNEGbALT8f8YOSHW0KJu6l2xU8DYY0fu/EmGxXdVnuTLvFUvBgPJMSqXq29SYHveejeAha+4AYgA==}
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
@@ -2812,6 +2827,8 @@ snapshots:
   '@types/node@25.0.7':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/picomatch@4.0.2': {}
 
   '@types/unist@3.0.3': {}
 

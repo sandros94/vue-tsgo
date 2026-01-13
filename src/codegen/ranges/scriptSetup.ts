@@ -48,7 +48,7 @@ interface UseTemplateRef extends CallExpressionRange {
     name?: string;
 }
 
-export interface ScriptSetupRanges extends ReturnType<typeof collectScriptSetupRanges> {}
+export type ScriptSetupRanges = ReturnType<typeof collectScriptSetupRanges>;
 
 const tsCheckRE = /^\s*@ts-(?:no)?check(?:$|\s)/;
 

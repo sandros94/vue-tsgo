@@ -2,6 +2,7 @@ shamefullyHoist: true
 
 catalog:
   "@types/node": ^25.0.7
+  "@types/picomatch": ^4.0.2
   "@vue/compiler-dom": ^3.5.26
   "@vue/compiler-sfc": ^3.5.26
   "@vue/language-core": ^3.2.2
@@ -13,5 +14,6 @@ catalog:
   muggle-string: ^0.4.1
   oxc-parser: ^0.108.0
   oxc-walker: ^0.6.0
+  picomatch: ^4.0.3
   tsdown: ^0.19.0
   vitest: ^4.0.17

@@ -18,7 +18,7 @@ export interface ExportDefaultRanges extends Range {
     };
 }
 
-export interface ScriptRanges extends ReturnType<typeof collectScriptRanges> {}
+export type ScriptRanges = ReturnType<typeof collectScriptRanges>;
 
 export function collectScriptRanges(script: IRScript) {
     let exportDefault: ExportDefaultRanges | undefined;
