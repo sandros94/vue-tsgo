@@ -126,7 +126,7 @@ export async function createProject(configPath: string): Promise<Project> {
     async function check() {
         await generate();
         const packageManager = await detectPackageManager(configRoot);
-        const command = packageManager?.name !== "npm" ? "npx" : packageManager.name;
+        const command = !packageManager || packageManager.name === "npm" ? "npx" : packageManager.name;
 
         const { stdout } = await $({ nothrow: true })`
             ${command} tsgo --project ${cacheRoot}/tsconfig.json --pretty true
