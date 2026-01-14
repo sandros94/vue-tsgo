@@ -1,6 +1,6 @@
 import CompilerDOM from "@vue/compiler-dom";
 import { camelize } from "@vue/shared";
-import { isMatch } from "picomatch";
+import picomatch from "picomatch";
 import type { VueCompilerOptions } from "@vue/language-core";
 import { getAttributeValueOffset, hyphenateAttr, hyphenateTag } from "../../shared";
 import { codeFeatures } from "../codeFeatures";
@@ -90,7 +90,7 @@ export function* generateElementProps(
 
             if (
                 propName === void 0 ||
-                options.vueCompilerOptions.dataAttributes.some((pattern) => isMatch(propName!, pattern))
+                options.vueCompilerOptions.dataAttributes.some((pattern) => picomatch(pattern)(propName!))
             ) {
                 if (prop.exp && prop.exp.constType !== CompilerDOM.ConstantTypes.CAN_STRINGIFY) {
                     failedExpressionInfos?.push({ node: prop.exp, prefix: "(", suffix: ")" });
@@ -158,7 +158,7 @@ export function* generateElementProps(
             }
         }
         else if (prop.type === CompilerDOM.NodeTypes.ATTRIBUTE) {
-            if (options.vueCompilerOptions.dataAttributes.some((pattern) => isMatch(prop.name, pattern))) {
+            if (options.vueCompilerOptions.dataAttributes.some((pattern) => picomatch(pattern)(prop.name))) {
                 continue;
             }
 
@@ -291,7 +291,7 @@ function getShouldCamelize(
         prop.arg?.type === CompilerDOM.NodeTypes.SIMPLE_EXPRESSION && prop.arg.isStatic
     )
         && hyphenateAttr(propName) === propName
-        && !options.vueCompilerOptions.htmlAttributes.some((pattern) => isMatch(propName, pattern));
+        && !options.vueCompilerOptions.htmlAttributes.some((pattern) => picomatch(pattern)(propName));
 }
 
 function getPropsCodeFeatures(checkUnknownProps: boolean) {

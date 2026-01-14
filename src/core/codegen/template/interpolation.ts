@@ -82,7 +82,11 @@ function* forEachInterpolationSegment(
         parseAndWalk(code, "dummy.ts", {
             scopeTracker,
             enter(node, parent) {
-                if (node.type === "Identifier" && !scopeTracker.isDeclared(node.name)) {
+                if (
+                    node.type === "Identifier" &&
+                    (parent?.type !== "MemberExpression" || node === parent.object) &&
+                    !scopeTracker.isDeclared(node.name)
+                ) {
                     identifiers.push([node.name, node.start, parent?.type === "Property" && parent.shorthand]);
                 }
             },
@@ -90,7 +94,7 @@ function* forEachInterpolationSegment(
     }
 
     for (const [name, offset, isShorthand] of identifiers) {
-        if (shouldIdentifierSkipped(name)) {
+        if (shouldIdentifierSkipped(ctx, name)) {
             continue;
         }
 
@@ -127,8 +131,9 @@ function* forEachInterpolationSegment(
     }
 }
 
-function shouldIdentifierSkipped(text: string) {
-    return isGloballyAllowed(text) ||
+function shouldIdentifierSkipped(ctx: TemplateCodegenContext, text: string) {
+    return ctx.scopes.some((scope) => scope.has(text)) ||
+        isGloballyAllowed(text) ||
         isLiteralWhitelisted(text) ||
         text === "require" ||
         text.startsWith("__VLS_");

@@ -24,9 +24,7 @@ export function* generateVFor(
         const end = (index ?? key ?? value)!.loc.end.offset;
         const text = node.loc.source.slice(start - node.loc.start.offset, end - node.loc.start.offset);
 
-        const { program: ast } = parseSync("dummy.ts", `const [${text}]`, {
-            sourceType: "module",
-        });
+        const { program: ast } = parseSync("dummy.ts", `const [${text}]`);
         ctx.declare(...collectBindingIdentifiers(ast).map((i) => i.name));
         yield [text, "template", start, codeFeatures.verification];
     }

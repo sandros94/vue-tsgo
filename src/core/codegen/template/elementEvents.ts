@@ -106,9 +106,7 @@ export function* generateEventExpression(
     prop: CompilerDOM.DirectiveNode,
 ): Generator<Code> {
     if (prop.exp?.type === CompilerDOM.NodeTypes.SIMPLE_EXPRESSION) {
-        const { program: ast } = parseSync("dummy.ts", prop.exp.content, {
-            sourceType: "module",
-        });
+        const { program: ast } = parseSync("dummy.ts", prop.exp.content);
 
         const isCompound = isCompoundExpression(ast);
         const interpolation = generateInterpolation(

@@ -1,0 +1,7 @@
+{
+  "extends": "@zinkawaii/tsconfig",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ]
+}

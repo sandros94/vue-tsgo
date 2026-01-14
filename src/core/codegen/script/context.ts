@@ -1,4 +1,4 @@
-import { getLocalTypesGenerator } from "@vue/language-core/lib/codegen/localTypes";
+import { getLocalTypesGenerator } from "@vue/language-core/lib/codegen/localTypes.js";
 import type { ScriptCodegenOptions } from "./index";
 
 export type ScriptCodegenContext = ReturnType<typeof createScriptCodegenContext>;

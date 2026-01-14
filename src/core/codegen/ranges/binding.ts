@@ -1,8 +1,9 @@
 import { isBindingIdentifier, walk } from "oxc-walker";
+import type { VueCompilerOptions } from "@vue/language-core";
 import type { BindingIdentifier, Node, Program } from "oxc-parser";
 import { getRange, type Range } from "./utils";
 
-export function collectBindingRanges(ast: Program) {
+export function collectBindingRanges(ast: Program, vueCompilerOptions: VueCompilerOptions) {
     const bindings: Range[] = [];
     const components: Range[] = [];
 
@@ -28,7 +29,7 @@ export function collectBindingRanges(ast: Program) {
                 if (node.importKind === "type") {
                     break;
                 }
-                const isVue = node.source.value.endsWith(".vue");
+                const isVue = vueCompilerOptions.extensions.some((ext) => node.source.value.endsWith(ext));
 
                 for (const specifier of node.specifiers) {
                     const range = getRange(specifier.local);

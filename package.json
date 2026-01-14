@@ -12,7 +12,8 @@
     ".": "./dist/index.mjs",
     "./package.json": "./package.json"
   },
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
+  "bin": "./dist/cli.mjs",
   "files": [
     "dist"
   ],
@@ -25,18 +26,23 @@
   },
   "dependencies": {
     "@vue/compiler-dom": "catalog:",
+    "@vue/language-core": "catalog:",
     "@vue/shared": "catalog:",
+    "clerc": "catalog:",
+    "consola": "catalog:",
+    "empathic": "catalog:",
     "muggle-string": "catalog:",
     "oxc-parser": "catalog:",
     "oxc-resolver": "catalog:",
     "oxc-walker": "catalog:",
-    "picomatch": "catalog:"
+    "pathe": "catalog:",
+    "picomatch": "catalog:",
+    "tinyglobby": "catalog:",
+    "tsconfck": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/picomatch": "catalog:",
-    "@vue/compiler-sfc": "catalog:",
-    "@vue/language-core": "catalog:",
     "@zinkawaii/eslint-config": "catalog:",
     "@zinkawaii/tsconfig": "catalog:",
     "bumpp": "catalog:",

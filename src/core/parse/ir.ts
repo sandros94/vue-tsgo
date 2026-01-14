@@ -1,4 +1,4 @@
-import CompilerDOM, { type RootNode } from "@vue/compiler-dom";
+import CompilerDOM from "@vue/compiler-dom";
 import { type Comment, type OxcError, parseSync, type Program } from "oxc-parser";
 import { getAttributeValueOffset } from "../shared";
 import { parseStyleBindings, parseStyleClassNames } from "./style/parse";
@@ -64,16 +64,17 @@ export interface IRCustomBlock extends IRBlock {
     type: string;
 }
 
-export function createIR(fileName: string, source: string) {
+export function createIR(fileName: string, sourceText: string) {
     const errors: CompilerDOM.CompilerError[] = [];
     const warnings: CompilerDOM.CompilerError[] = [];
 
-    const sfc = CompilerDOM.parse(source, {
+    const sfc = CompilerDOM.parse(sourceText, {
         comments: true,
         parseMode: "sfc",
+        isNativeTag: () => true,
+        isPreTag: () => true,
         onError: (err) => errors.push(err),
         onWarn: (warn) => warnings.push(warn),
-        expressionPlugins: ["typescript"],
     });
 
     const ir: IR = {
@@ -100,7 +101,6 @@ export function createIR(fileName: string, source: string) {
                 const options: CompilerDOM.CompilerOptions = {
                     onError: (err) => errors.push(err),
                     onWarn: (warn) => warnings.push(warn),
-                    expressionPlugins: ["typescript"],
                 };
                 const ast = parseTemplate(block.content, options);
 
@@ -115,9 +115,7 @@ export function createIR(fileName: string, source: string) {
             }
             case "script": {
                 const block = createIRBlock(sfc, node, "js");
-                const result = parseSync(`yggdrasill.${block.lang}`, block.content, {
-                    sourceType: "module",
-                });
+                const result = parseSync(`yggdrasill.${block.lang}`, block.content);
 
                 if (block.attrs.setup || block.attrs.vapor) {
                     ir.scriptSetup = {
@@ -165,11 +163,34 @@ export function createIR(fileName: string, source: string) {
         }
     }
 
+    if (!ir.script && !ir.scriptSetup) {
+        ir.scriptSetup = {
+            name: "scriptSetup",
+            lang: "ts",
+            start: 0,
+            end: 0,
+            innerStart: 0,
+            innerEnd: 0,
+            attrs: {},
+            content: "",
+            ast: {
+                type: "Program",
+                body: [],
+                sourceType: "module",
+                hashbang: null,
+                start: 0,
+                end: 0,
+            },
+            comments: [],
+            errors: [],
+        };
+    }
+
     return ir;
 }
 
 function createIRBlock(
-    sfc: RootNode,
+    sfc: CompilerDOM.RootNode,
     node: CompilerDOM.ElementNode,
     defaultLang: string,
 ): Omit<IRBlock, "name"> {

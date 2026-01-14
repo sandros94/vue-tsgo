@@ -2,6 +2,7 @@ import { walk } from "oxc-walker";
 import type { VueCompilerOptions } from "@vue/language-core";
 import type { Argument, CallExpression, Node } from "oxc-parser";
 import { collectBindingIdentifiers, collectBindingRanges } from "./binding";
+import { collectImportRanges } from "./import";
 import { getClosestMultiLineCommentRange, getLeadingComments, getRange, type Range } from "./utils";
 import type { IRScriptSetup } from "../../parse/ir";
 
@@ -82,7 +83,8 @@ export function collectScriptSetupRanges(scriptSetup: IRScriptSetup, vueCompiler
         break;
     }
 
-    const { bindings, components } = collectBindingRanges(scriptSetup.ast);
+    const { bindings, components } = collectBindingRanges(scriptSetup.ast, vueCompilerOptions);
+    const imports = collectImportRanges(scriptSetup.ast);
     const defineModel: DefineModel[] = [];
     let defineProps: DefineProps | undefined;
     let withDefaults: CallExpressionRange | undefined;
@@ -282,6 +284,7 @@ export function collectScriptSetupRanges(scriptSetup: IRScriptSetup, vueCompiler
         importSectionEndOffset,
         bindings,
         components,
+        imports,
         defineModel,
         defineProps,
         withDefaults,

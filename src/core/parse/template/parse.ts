@@ -4,7 +4,7 @@ import { transformText } from "./transforms/transformText";
 import { transformFor } from "./transforms/vFor";
 import { transformIf } from "./transforms/vIf";
 
-export function parseTemplate(source: string, options: CompilerOptions) {
+export function parseTemplate(sourceText: string, options: CompilerOptions) {
     const [nodeTransforms, directiveTransforms] = getBaseTransformPreset();
     const resolvedOptions: CompilerOptions = {
         ...options,
@@ -23,7 +23,7 @@ export function parseTemplate(source: string, options: CompilerOptions) {
         },
     };
 
-    const ast = parse(source, resolvedOptions);
+    const ast = parse(sourceText, resolvedOptions);
     transform(ast, resolvedOptions);
     return ast;
 }

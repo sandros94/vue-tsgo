@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import { posix as path } from "node:path";
-import { getDefaultCompilerOptions, type RawVueCompilerOptions, type VueCompilerOptions, type VueLanguagePlugin } from "@vue/language-core";
+import { getDefaultCompilerOptions, type RawVueCompilerOptions, type VueCompilerOptions } from "@vue/language-core";
 import { camelize } from "@vue/shared";
 import resolver from "oxc-resolver";
+import { isAbsolute, join } from "pathe";
 import { hyphenateTag } from "./shared";
 
 const syntaxRE = /^\s*@(?<key>\w+)\b(?<value>.+)/m;
@@ -27,7 +27,6 @@ export function parseLocalCompilerOptions(comments: string[]) {
 
 export function createCompilerOptionsResolver() {
     const resolved: Omit<RawVueCompilerOptions, "target" | "strictTemplates" | "typesRoot" | "plugins"> = {};
-    const plugins: VueLanguagePlugin[] = [];
     let target: number | undefined;
     let typesRoot: string | undefined;
 
@@ -54,34 +53,14 @@ export function createCompilerOptionsResolver() {
                 }
                 case "typesRoot": {
                     if (options[key] !== void 0) {
-                        if (path.isAbsolute(options[key])) {
+                        if (isAbsolute(options[key])) {
                             typesRoot = options[key];
                         }
                         else {
-                            typesRoot = path.join(rootDir, options[key]);
+                            typesRoot = join(rootDir, options[key]);
                         }
                     }
                     break;
-                }
-                case "plugins": {
-                    for (const pluginPath of options.plugins ?? []) {
-                        try {
-                            const resolve = (require as NodeJS.Require | undefined)?.resolve;
-                            const resolvedPath = resolve?.(pluginPath, { paths: [rootDir] });
-                            if (resolvedPath) {
-                                // eslint-disable-next-line ts/no-require-imports
-                                const plugin = require(resolvedPath);
-                                plugin.__moduleName = pluginPath;
-                                plugins.push(plugin);
-                            }
-                            else {
-                                console.warn("[Vue] Load plugin failed:", pluginPath);
-                            }
-                        }
-                        catch (error) {
-                            console.warn("[Vue] Resolve plugin path failed:", pluginPath, error);
-                        }
-                    }
                 }
                 default: {
                     // @ts-expect-error ...
@@ -105,7 +84,6 @@ export function createCompilerOptionsResolver() {
         return {
             ...defaults,
             ...resolved,
-            plugins,
             macros: {
                 ...defaults.macros,
                 ...resolved.macros,

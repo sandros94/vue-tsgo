@@ -2,7 +2,7 @@ import { section } from "./index";
 import type { IRScript, IRScriptSetup } from "../../parse/ir";
 import type { Code, CodeInformation } from "../../types";
 
-export function createCodeTransformer(
+export function createBlockTransform(
     block: IRScript | IRScriptSetup,
     start: number,
     end: number,

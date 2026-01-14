@@ -67,9 +67,7 @@ function* generateSlotParameters(
     slotVar: string,
 ): Generator<Code> {
     const text = `(${exp.content}) => {}`;
-    const { program: ast } = parseSync("dummy.ts", text, {
-        sourceType: "module",
-    });
+    const { program: ast } = parseSync("dummy.ts", text);
 
     const statement = ast.body[0];
     if (
@@ -125,7 +123,8 @@ function* generateSlotParameters(
                 startOffset + nameEnd,
                 codeFeatures.verification,
             ]);
-            replaceSourceRange(interpolation, "template", startOffset + nameEnd, startOffset + typeEnd);
+            replaceSourceRange(interpolation, "template", startOffset + nameEnd, startOffset + nameEnd, `/* `);
+            replaceSourceRange(interpolation, "template", startOffset + typeEnd, startOffset + typeEnd, ` */`);
         }
         else {
             types.push(null);
@@ -141,7 +140,7 @@ function* generateSlotParameters(
         const boundary = yield* generateBoundary("template", exp.loc.start.offset, codeFeatures.verification);
         yield `(`;
         yield* types.flatMap((type) => (type ? [`_`, type, `, `] : `_, `));
-        yield `) => [] as any`;
+        yield `) => {}`;
         yield boundary.end(exp.loc.end.offset);
     }
     yield `)${endOfLine}`;

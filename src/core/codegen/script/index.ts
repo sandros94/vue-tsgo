@@ -1,4 +1,4 @@
-import { posix as path } from "node:path";
+import { dirname, isAbsolute, relative } from "pathe";
 import type { VueCompilerOptions } from "@vue/language-core";
 import { codeFeatures } from "../codeFeatures";
 import { names } from "../names";
@@ -185,8 +185,8 @@ function* generateGlobalTypesReference(
     const { target, lib, typesRoot, checkUnknownProps } = options;
 
     let typesPath: string;
-    if (path.isAbsolute(typesRoot)) {
-        let relativePath = path.relative(path.dirname(fileName), typesRoot);
+    if (isAbsolute(typesRoot)) {
+        let relativePath = relative(dirname(fileName), typesRoot);
         if (
             relativePath !== typesRoot
             && !relativePath.startsWith("./")

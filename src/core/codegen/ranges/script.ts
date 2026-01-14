@@ -1,6 +1,8 @@
 
+import type { VueCompilerOptions } from "@vue/language-core";
 import type { ObjectExpression } from "oxc-parser";
 import { collectBindingRanges } from "./binding";
+import { collectImportRanges } from "./import";
 import { getClosestMultiLineCommentRange, getRange, type Range } from "./utils";
 import type { IRScript } from "../../parse/ir";
 
@@ -20,9 +22,10 @@ export interface ExportDefaultRanges extends Range {
 
 export type ScriptRanges = ReturnType<typeof collectScriptRanges>;
 
-export function collectScriptRanges(script: IRScript) {
+export function collectScriptRanges(script: IRScript, vueCompilerOptions: VueCompilerOptions) {
     let exportDefault: ExportDefaultRanges | undefined;
-    const { bindings, components } = collectBindingRanges(script.ast);
+    const { bindings, components } = collectBindingRanges(script.ast, vueCompilerOptions);
+    const imports = collectImportRanges(script.ast);
 
     for (const node of script.ast.body) {
         if (node.type !== "ExportDefaultDeclaration") {
@@ -109,5 +112,6 @@ export function collectScriptRanges(script: IRScript) {
         exportDefault,
         bindings,
         components,
+        imports,
     };
 }

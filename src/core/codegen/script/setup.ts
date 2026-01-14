@@ -3,7 +3,7 @@ import { codeFeatures } from "../codeFeatures";
 import { names } from "../names";
 import { endOfLine, identifierRE, newLine, section } from "../utils";
 import { generateBoundary } from "../utils/boundary";
-import { createCodeTransformer } from "../utils/transform";
+import { createBlockTransform } from "../utils/transform";
 import { generateComponent } from "./component";
 import type { IRBlock, IRBlockAttr, IRScriptSetup } from "../../parse/ir";
 import type { Code } from "../../types";
@@ -85,7 +85,7 @@ export function* generateSetupGeneric(
         emitTypes.push(`typeof ${scriptSetupRanges.defineEmits.name ?? names.emit}`);
     }
     if (scriptSetupRanges.defineModel.length) {
-        emitTypes.push(names.modelEmit);
+        emitTypes.push(`typeof ${names.modelEmit}`);
     }
 
     yield `return {} as {${newLine}`;
@@ -132,7 +132,7 @@ export function* generateSetupBody(
     body: Iterable<Code>,
     output?: Iterable<Code>,
 ) {
-    const { insert, replace, generate } = createCodeTransformer(
+    const { insert, replace, generate } = createBlockTransform(
         scriptSetup,
         Math.max(scriptSetupRanges.leadingCommentEndOffset, scriptSetupRanges.importSectionEndOffset),
         scriptSetup.content.length,
