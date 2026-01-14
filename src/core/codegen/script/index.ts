@@ -14,7 +14,8 @@ import type { ScriptSetupRanges } from "../ranges/scriptSetup";
 
 export interface ScriptCodegenOptions {
     vueCompilerOptions: VueCompilerOptions;
-    fileName: string;
+    sourcePath: string;
+    targetPath: string;
     script?: IRScript;
     scriptSetup?: IRScriptSetup;
     scriptRanges?: ScriptRanges;
@@ -43,7 +44,7 @@ function* generateScript(
 ): Generator<Code> {
     const { vueCompilerOptions, script, scriptSetup, scriptRanges, scriptSetupRanges } = options;
 
-    yield* generateGlobalTypesReference(options.vueCompilerOptions, options.fileName);
+    yield* generateGlobalTypesReference(options.vueCompilerOptions, options.targetPath);
 
     // <script src="...">
     if (typeof script?.attrs.src === "object") {

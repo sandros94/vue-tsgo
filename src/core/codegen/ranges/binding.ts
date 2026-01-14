@@ -12,7 +12,7 @@ export function collectBindingRanges(ast: Program, vueCompilerOptions: VueCompil
             case "VariableDeclaration": {
                 for (const decl of node.declarations) {
                     bindings.push(
-                        ...collectBindingIdentifiers(decl.id).map((i) => i.range),
+                        ...collectBindingIdentifiers(decl).map((i) => i.range),
                     );
                 }
                 break;

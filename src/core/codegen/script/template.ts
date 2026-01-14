@@ -44,12 +44,12 @@ function* generateTemplateCtx(
     ctx: ScriptCodegenContext,
     self?: string,
 ): Generator<Code> {
-    const { vueCompilerOptions, fileName, scriptSetupRanges, templateAndStyleTypes } = options;
+    const { vueCompilerOptions, sourcePath, scriptSetupRanges, templateAndStyleTypes } = options;
     const exps: Code[] = [];
     const propTypes: string[] = [];
     const emitTypes: string[] = [];
 
-    if (vueCompilerOptions.petiteVueExtensions.some((ext) => fileName.endsWith(ext))) {
+    if (vueCompilerOptions.petiteVueExtensions.some((ext) => sourcePath.endsWith(ext))) {
         exps.push(`globalThis`);
     }
     if (self) {

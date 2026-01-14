@@ -195,11 +195,11 @@ export function createTemplateCodegenContext() {
                 return {
                     ...features,
                     verification: {
-                        shouldReport: (source, code) => {
+                        shouldReport: (code) => {
                             if (
                                 typeof features.verification !== "object"
                                 || !features.verification.shouldReport
-                                || features.verification.shouldReport(source, code) === true
+                                || features.verification.shouldReport(code) === true
                             ) {
                                 data.expectError!.token++;
                             }

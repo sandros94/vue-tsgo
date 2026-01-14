@@ -2,7 +2,7 @@ import type { Segment } from "muggle-string";
 
 export interface CodeInformation {
     verification?: boolean | {
-        shouldReport?: (source: string | undefined, code: string | number | undefined) => boolean;
+        shouldReport?: (code: number) => boolean;
     };
     __combineToken?: symbol;
 }

@@ -1,5 +1,4 @@
 import { Cli } from "clerc";
-import consola from "consola";
 import { join, resolve } from "pathe";
 import { find } from "tsconfck";
 import packageJson from "../../package.json";
@@ -28,12 +27,14 @@ const cli = Cli()
         }
 
         if (configPath === void 0) {
-            consola.error("[Vue] Could not find a tsconfig.json file.");
+            console.error("[Vue] Could not find a tsconfig.json file.");
             process.exit(1);
         }
 
         const project = await createProject(configPath);
-        await project.emit();
+        if (!await project.check()) {
+            process.exit(1);
+        }
     });
 
 await cli.parse();

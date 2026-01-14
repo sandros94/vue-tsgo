@@ -5,7 +5,6 @@ import { parseStyleBindings, parseStyleClassNames } from "./style/parse";
 import { parseTemplate } from "./template/parse";
 
 export interface IR {
-    fileName: string;
     template?: IRTemplate;
     script?: IRScript;
     scriptSetup?: IRScriptSetup;
@@ -78,7 +77,6 @@ export function createIR(fileName: string, sourceText: string) {
     });
 
     const ir: IR = {
-        fileName,
         styles: [],
         comments: [],
         customBlocks: [],
@@ -115,7 +113,7 @@ export function createIR(fileName: string, sourceText: string) {
             }
             case "script": {
                 const block = createIRBlock(sfc, node, "js");
-                const result = parseSync(`yggdrasill.${block.lang}`, block.content);
+                const result = parseSync(`dummy.${block.lang}`, block.content);
 
                 if (block.attrs.setup || block.attrs.vapor) {
                     ir.scriptSetup = {

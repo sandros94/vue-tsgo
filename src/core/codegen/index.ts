@@ -17,29 +17,32 @@ import type { Range } from "./ranges/utils";
 
 export interface SourceFile {
     type: "virtual" | "native";
-    fileName: string;
+    sourcePath: string;
+    targetPath: string;
     sourceText: string;
     virtualText?: string;
     virtualLang?: string;
     mapper: SourceMap<CodeInformation>;
     imports: Range[];
     references: string[];
+    getSourceLineAndColumn: (offset: number) => { line: number; column: number };
+    getVirtualOffset: (line: number, column: number) => number;
 }
 
 const referenceRE = /\/\/\/\s*<reference\s+path=["'](.*?)["']\s*\/>/g;
 
 export function createSourceFile(
-    fileName: string,
+    sourcePath: string,
     targetPath: string,
     sourceText: string,
     vueCompilerOptions: VueCompilerOptions,
 ) {
-    const sourceFile = vueCompilerOptions.extensions.some((ext) => fileName.endsWith(ext))
-        ? createVirtualFile(targetPath, sourceText, vueCompilerOptions)
-        : createNativeFile(targetPath, sourceText, vueCompilerOptions);
+    const sourceFile = vueCompilerOptions.extensions.some((ext) => sourcePath.endsWith(ext))
+        ? createVirtualFile(sourcePath, targetPath, sourceText, vueCompilerOptions)
+        : createNativeFile(sourcePath, targetPath, sourceText, vueCompilerOptions);
 
     for (const match of sourceText.matchAll(referenceRE)) {
-        const path = join(dirname(fileName), match[1]);
+        const path = join(dirname(sourcePath), match[1]);
         sourceFile.references.push(path);
     }
 
@@ -47,17 +50,20 @@ export function createSourceFile(
 }
 
 function createVirtualFile(
-    fileName: string,
+    sourcePath: string,
+    targetPath: string,
     sourceText: string,
     vueCompilerOptions: VueCompilerOptions,
 ): SourceFile {
-    const ir = createIR(fileName, sourceText);
+    const ir = createIR(sourcePath, sourceText);
+    const virtualLang = ir.scriptSetup?.lang ?? ir.script?.lang ?? "ts";
+    targetPath += `.${virtualLang}`.padStart(4, "_");
 
     // #region vueCompilerOptions
     const options = parseLocalCompilerOptions(ir.comments);
     if (options) {
         const resolver = createCompilerOptionsResolver();
-        resolver.add(options, dirname(ir.fileName));
+        resolver.add(options, sourcePath);
         vueCompilerOptions = resolver.resolve(vueCompilerOptions);
     }
     // #endregion
@@ -117,7 +123,7 @@ function createVirtualFile(
         componentName = scriptSetupRanges.defineOptions.name;
     }
     else {
-        componentName = basename(ir.fileName, extname(ir.fileName));
+        componentName = basename(sourcePath, extname(sourcePath));
     }
     componentName = capitalize(camelize(componentName));
     // #endregion
@@ -187,7 +193,8 @@ function createVirtualFile(
     // #region generatedScript
     const generatedScript = generateScript({
         vueCompilerOptions,
-        fileName: ir.fileName,
+        sourcePath,
+        targetPath,
         script: ir.script,
         scriptSetup: ir.scriptSetup,
         scriptRanges,
@@ -256,25 +263,30 @@ function createVirtualFile(
 
     const mappings = createMappings(codes);
     const mapper = new SourceMap<CodeInformation>(mappings);
+    const virtualText = toString(codes);
 
     return {
         type: "virtual",
-        fileName,
+        sourcePath,
+        targetPath,
         sourceText,
-        virtualText: toString(codes),
-        virtualLang: ir.scriptSetup?.lang ?? ir.script?.lang ?? "ts",
+        virtualText,
+        virtualLang,
         mapper,
         imports,
         references: [],
+        getSourceLineAndColumn: createLineAndColumnGetter(sourceText),
+        getVirtualOffset: createOffsetGetter(virtualText),
     };
 }
 
 function createNativeFile(
-    fileName: string,
+    sourcePath: string,
+    targetPath: string,
     sourceText: string,
     vueCompilerOptions: VueCompilerOptions,
 ): SourceFile {
-    const { program: ast } = parseSync(fileName, sourceText);
+    const { program: ast } = parseSync(sourcePath, sourceText);
 
     const codes: Code[] = [];
     const imports = collectImportRanges(ast);
@@ -282,15 +294,19 @@ function createNativeFile(
 
     const mappings = createMappings(codes);
     const mapper = new SourceMap<CodeInformation>(mappings);
+    const virtualText = codes.length > 1 ? toString(codes) : void 0;
 
     return {
         type: "native",
-        fileName,
+        sourcePath,
+        targetPath,
         sourceText,
-        virtualText: codes.length > 1 ? toString(codes) : void 0,
+        virtualText,
         mapper,
         imports,
         references: [],
+        getSourceLineAndColumn: createLineAndColumnGetter(sourceText),
+        getVirtualOffset: createOffsetGetter(virtualText ?? ""),
     };
 }
 
@@ -355,14 +371,38 @@ function createMappings(codes: Code[]) {
     return mappings;
 }
 
-const registries: Record<string, Map<string, SourceFile>> = {};
+function createOffsetGetter(text: string) {
+    const lineOffsets: number[] = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === "\n") {
+            lineOffsets.push(i + 1);
+        }
+    }
 
-export function getSourceFileRegistry(vueCompilerOptions: VueCompilerOptions) {
-    const key = JSON.stringify(
-        Object.keys(vueCompilerOptions)
-            .filter((key) => key !== "plugins")
-            .sort()
-            .map((key) => [key, vueCompilerOptions[key as keyof VueCompilerOptions]]),
-    );
-    return registries[key] ??= new Map();
+    return (line: number, column: number) => {
+        return lineOffsets[line - 1] + column - 1;
+    };
+}
+
+function createLineAndColumnGetter(text: string) {
+    const lineOffsets: number[] = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === "\n") {
+            lineOffsets.push(i + 1);
+        }
+    }
+
+    return (offset: number) => {
+        let line = 0;
+        for (let i = 0; i < lineOffsets.length; i++) {
+            if (lineOffsets[i] > offset) {
+                break;
+            }
+            line = i;
+        }
+        return {
+            line: line + 1,
+            column: offset - lineOffsets[line] + 1,
+        };
+    };
 }
