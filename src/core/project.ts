@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises"
 import { stripVTControlCharacters, styleText } from "node:util";
 import * as pkg from "empathic/package";
 import { detectPackageManager } from "nypm";
+import { ResolverFactory } from "oxc-resolver";
 import { dirname, join, relative, resolve } from "pathe";
 import picomatch from "picomatch";
 import { glob } from "tinyglobby";
@@ -10,7 +11,7 @@ import { parse } from "tsconfck";
 import { $ } from "zx";
 import packageJson from "../../package.json";
 import { createSourceFile, type SourceFile } from "./codegen";
-import { createCompilerOptionsResolver } from "./compilerOptions";
+import { createCompilerOptionsBuilder } from "./compilerOptions";
 import type { CodeInformation } from "./types";
 
 export interface Project {
@@ -27,16 +28,23 @@ export async function createProject(configPath: string): Promise<Project> {
         cwd: configRoot,
     })!;
     if (cacheRoot === void 0) {
-        throw new Error("[Vue] Failed to find or create cache directory.");
+        throw new Error("[Vue] Failed to find a cache directory.");
     }
 
-    const resolver = createCompilerOptionsResolver();
+    const builder = createCompilerOptionsBuilder();
+    const resolver = new ResolverFactory({
+        tsconfig: {
+            configFile: configPath,
+        },
+        extensions: [".js", ".jsx", ".ts", ".tsx", ".d.ts", ".json", ".vue"],
+    });
+
     for (const extended of parsed.extended?.toReversed() ?? []) {
         if ("vueCompilerOptions" in extended.tsconfig) {
-            resolver.add(extended.tsconfig.vueCompilerOptions, dirname(extended.tsconfigFile));
+            builder.add(extended.tsconfig.vueCompilerOptions, dirname(extended.tsconfigFile));
         }
     }
-    const vueCompilerOptions = resolver.resolve();
+    const vueCompilerOptions = builder.build();
     const sourceToFileMap = new Map<string, SourceFile>();
     const targetToFileMap = new Map<string, SourceFile>();
 
@@ -64,6 +72,21 @@ export async function createProject(configPath: string): Promise<Project> {
         sourceToFileMap.set(path, sourceFile);
         targetToFileMap.set(sourceFile.targetPath, sourceFile);
 
+        for (const range of sourceFile.imports) {
+            const specifier = sourceFile.sourceText.slice(range.start + 1, range.end - 1);
+            const result = await resolver.resolveFileAsync(sourceFile.sourcePath, specifier);
+            if (result?.path === void 0 || result.path.includes("/node_modules/")) {
+                continue;
+            }
+            try {
+                const stats = await stat(result.path);
+                if (stats.isFile()) {
+                    includeSet.add(result.path);
+                }
+            }
+            catch {}
+        }
+
         for (const path of sourceFile.references) {
             includeSet.add(path);
         }
@@ -79,20 +102,21 @@ export async function createProject(configPath: string): Promise<Project> {
 
         for (const path of includeSet) {
             const sourceFile = getSourceFile(path)!;
-
             await mkdir(dirname(sourceFile.targetPath), { recursive: true });
+
             if (sourceFile.virtualText !== void 0) {
                 let { virtualText } = sourceFile;
                 for (const range of sourceFile.imports) {
-                    const imported = join(dirname(path), sourceFile.sourceText.slice(range.start + 1, range.end - 1));
-                    if (imported !== void 0) {
-                        const importedFile = sourceToFileMap.get(imported);
+                    const specifier = sourceFile.sourceText.slice(range.start + 1, range.end - 1);
+                    const result = await resolver.resolveFileAsync(sourceFile.sourcePath, specifier);
+                    if (result?.path !== void 0) {
+                        const importedFile = sourceToFileMap.get(result.path);
                         if (importedFile?.type === "virtual") {
                             // eslint-disable-next-line no-unreachable-loop
                             for (const [offset] of sourceFile.mapper.toGeneratedLocation(range.end - 1)) {
-                                virtualText = virtualText!.slice(0, offset)
+                                virtualText = virtualText.slice(0, offset)
                                     + `.${importedFile.virtualLang}`.padStart(4, "_")
-                                    + virtualText!.slice(offset + 4);
+                                    + virtualText.slice(offset + 4);
                                 break;
                             }
                         }
@@ -122,9 +146,15 @@ export async function createProject(configPath: string): Promise<Project> {
             await writeFile(stubConfigPath, JSON.stringify(stubConfig, null, 2));
         }
 
-        const nodeModulesPath = join(mutualRoot, "node_modules");
-        const targetNodeModulesPath = toTargetPath(nodeModulesPath);
-        await symlink(nodeModulesPath, targetNodeModulesPath);
+        for (const path of [
+            join(mutualRoot, "package.json"),
+            join(mutualRoot, "node_modules"),
+        ]) {
+            try {
+                await symlink(path, toTargetPath(path));
+            }
+            catch {}
+        }
     }
 
     async function check() {
@@ -143,7 +173,7 @@ export async function createProject(configPath: string): Promise<Project> {
         for (let [path, diagnostics] of Object.entries(groups)) {
             const sourceFile = targetToFileMap.get(path);
 
-            for (let i = 0; i < diagnostics.length; i++) {
+            outer: for (let i = 0; i < diagnostics.length; i++) {
                 const diagnostic = diagnostics[i];
 
                 if (!sourceFile || sourceFile.virtualText === void 0) {
@@ -154,42 +184,25 @@ export async function createProject(configPath: string): Promise<Project> {
                 }
                 path = sourceFile.sourcePath;
 
-                const start = sourceFile.getVirtualOffset(
-                    diagnostic.start.line,
-                    diagnostic.start.column,
-                );
-                const end = sourceFile.getVirtualOffset(
-                    diagnostic.end.line,
-                    diagnostic.end.column,
-                );
-
-                let left: number | undefined;
                 // eslint-disable-next-line no-unreachable-loop
-                for (const [offset] of sourceFile.mapper.toSourceLocation(
-                    Number(start),
+                for (const [start, end] of sourceFile.mapper.toSourceRange(
+                    sourceFile.getVirtualOffset(
+                        diagnostic.start.line,
+                        diagnostic.start.column,
+                    ),
+                    sourceFile.getVirtualOffset(
+                        diagnostic.end.line,
+                        diagnostic.end.column,
+                    ),
+                    true,
                     (data) => isVerificationEnabled(data, diagnostic.code),
                 )) {
-                    left = offset;
-                    break;
+                    diagnostic.start = sourceFile.getSourceLineAndColumn(start);
+                    diagnostic.end = sourceFile.getSourceLineAndColumn(end);
+                    continue outer;
                 }
 
-                let right: number | undefined;
-                // eslint-disable-next-line no-unreachable-loop
-                for (const [offset] of sourceFile.mapper.toSourceLocation(
-                    Number(end),
-                    (data) => isVerificationEnabled(data, diagnostic.code),
-                )) {
-                    right = offset;
-                    break;
-                }
-
-                if (!left || !right) {
-                    diagnostics.splice(i--, 1);
-                    continue;
-                }
-
-                diagnostic.start = sourceFile.getSourceLineAndColumn(left);
-                diagnostic.end = sourceFile.getSourceLineAndColumn(right);
+                diagnostics.splice(i--, 1);
             }
 
             const relativePath = relative(process.cwd(), path);

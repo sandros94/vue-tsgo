@@ -1,7 +1,7 @@
-import { isBindingIdentifier, walk } from "oxc-walker";
+import { type Identifier, walk } from "oxc-walker";
 import type { VueCompilerOptions } from "@vue/language-core";
-import type { BindingIdentifier, Node, Program } from "oxc-parser";
-import { getRange, type Range } from "./utils";
+import type { BindingIdentifier, BindingPattern, BindingProperty, Node, ParamPattern, Program } from "oxc-parser";
+import { getRange, isFunctionLike, type Range } from "./utils";
 
 export function collectBindingRanges(ast: Program, vueCompilerOptions: VueCompilerOptions) {
     const bindings: Range[] = [];
@@ -78,23 +78,64 @@ export function collectBindingRanges(ast: Program, vueCompilerOptions: VueCompil
 }
 
 export function collectBindingIdentifiers(node: Node) {
-    const result: {
-        name: string;
-        range: Range;
-        isRest: boolean;
-    }[] = [];
+    const result: [Node, boolean][] = [];
 
     walk(node, {
-        enter(node, parent) {
-            if (isBindingIdentifier(node, parent)) {
-                result.push({
-                    name: (node as BindingIdentifier).name,
-                    range: getRange(node),
-                    isRest: parent?.type === "RestElement",
-                });
+        enter(node) {
+            if (node.type === "VariableDeclarator") {
+                result.push(...forEachBindingIdentifier(node.id));
+                this.skip();
+            }
+            else if (isFunctionLike(node)) {
+                for (const param of node.params) {
+                    result.push(...forEachBindingIdentifier(param));
+                }
+                this.skip();
             }
         },
     });
 
-    return result;
+    return result.map(([node, isRest]) => ({
+        name: (node as BindingIdentifier).name,
+        range: getRange(node),
+        isRest,
+    }));
+}
+
+function* forEachBindingIdentifier(
+    node: Identifier | BindingPattern | BindingProperty | ParamPattern,
+    rest = false,
+): Generator<[Node, boolean]> {
+    switch (node.type) {
+        case "Identifier": {
+            yield [node, rest];
+            break;
+        }
+        case "Property": {
+            yield* forEachBindingIdentifier(node.value);
+            break;
+        }
+        case "RestElement": {
+            yield* forEachBindingIdentifier(node.argument, true);
+            break;
+        }
+        case "AssignmentPattern": {
+            yield* forEachBindingIdentifier(node.left);
+            break;
+        }
+        case "ArrayPattern": {
+            for (const element of node.elements) {
+                if (element) {
+                    yield* forEachBindingIdentifier(element);
+                }
+            }
+            break;
+        }
+        case "ObjectPattern": {
+            for (const prop of node.properties) {
+                yield* forEachBindingIdentifier(prop);
+            }
+            break;
+        }
+    }
 }

@@ -25,7 +25,7 @@ export function parseLocalCompilerOptions(comments: string[]) {
     }
 }
 
-export function createCompilerOptionsResolver() {
+export function createCompilerOptionsBuilder() {
     const resolved: Omit<RawVueCompilerOptions, "target" | "strictTemplates" | "typesRoot" | "plugins"> = {};
     let target: number | undefined;
     let typesRoot: string | undefined;
@@ -75,7 +75,7 @@ export function createCompilerOptionsResolver() {
         }
     }
 
-    function resolve(defaults = getDefaultCompilerOptions(
+    function build(defaults = getDefaultCompilerOptions(
         target,
         resolved.lib,
         void 0,
@@ -106,7 +106,7 @@ export function createCompilerOptionsResolver() {
 
     return {
         add,
-        resolve,
+        build,
     };
 }
 

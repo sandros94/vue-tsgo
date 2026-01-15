@@ -1,4 +1,4 @@
-import type { Comment, Node } from "oxc-parser";
+import type { ArrowFunctionExpression, Comment, Function, Node } from "oxc-parser";
 
 export interface Range {
     start: number;
@@ -54,4 +54,18 @@ export function getClosestMultiLineCommentRange(
     if (comment) {
         return getRange(comment);
     }
+}
+
+export function isFunctionLike(node: Node): node is ArrowFunctionExpression | Function {
+    return (
+        node.type === "ArrowFunctionExpression" ||
+        node.type === "FunctionDeclaration" ||
+        node.type === "FunctionExpression" ||
+        node.type === "TSDeclareFunction" ||
+        node.type === "TSEmptyBodyFunctionExpression"
+    );
+}
+
+export function isStatement(node: Node) {
+    return node.type.endsWith("Statement") || node.type.endsWith("Declaration");
 }

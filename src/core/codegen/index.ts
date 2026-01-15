@@ -4,8 +4,9 @@ import { replaceSourceRange, toString } from "muggle-string";
 import { parseSync } from "oxc-parser";
 import { basename, dirname, extname, join } from "pathe";
 import type { Mapping, VueCompilerOptions } from "@vue/language-core";
-import { createCompilerOptionsResolver, parseLocalCompilerOptions } from "../compilerOptions";
+import { createCompilerOptionsBuilder, parseLocalCompilerOptions } from "../compilerOptions";
 import { createIR, type IRBlock } from "../parse/ir";
+import { codeFeatures } from "./codeFeatures";
 import { collectImportRanges } from "./ranges/import";
 import { collectScriptRanges } from "./ranges/script";
 import { collectScriptSetupRanges } from "./ranges/scriptSetup";
@@ -62,9 +63,9 @@ function createVirtualFile(
     // #region vueCompilerOptions
     const options = parseLocalCompilerOptions(ir.comments);
     if (options) {
-        const resolver = createCompilerOptionsResolver();
-        resolver.add(options, sourcePath);
-        vueCompilerOptions = resolver.resolve(vueCompilerOptions);
+        const builder = createCompilerOptionsBuilder();
+        builder.add(options, sourcePath);
+        vueCompilerOptions = builder.build(vueCompilerOptions);
     }
     // #endregion
 
@@ -288,7 +289,7 @@ function createNativeFile(
 ): SourceFile {
     const { program: ast } = parseSync(sourcePath, sourceText);
 
-    const codes: Code[] = [];
+    const codes: Code[] = [[sourceText, void 0, 0, codeFeatures.verification]];
     const imports = collectImportRanges(ast);
     transformImportRanges(vueCompilerOptions, sourceText, 0, void 0, codes, imports);
 

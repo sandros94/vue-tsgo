@@ -3,7 +3,7 @@ import type { VueCompilerOptions } from "@vue/language-core";
 import type { Argument, CallExpression, Node } from "oxc-parser";
 import { collectBindingIdentifiers, collectBindingRanges } from "./binding";
 import { collectImportRanges } from "./import";
-import { getClosestMultiLineCommentRange, getLeadingComments, getRange, type Range } from "./utils";
+import { getClosestMultiLineCommentRange, getLeadingComments, getRange, isFunctionLike, isStatement, type Range } from "./utils";
 import type { IRScriptSetup } from "../../parse/ir";
 
 interface CallExpressionRange {
@@ -190,7 +190,7 @@ export function collectScriptSetupRanges(scriptSetup: IRScriptSetup, vueCompiler
 
                     if (parent.type === "VariableDeclarator" && parent.id.type === "ObjectPattern") {
                         defineProps.destructured = new Set();
-                        for (const { name, isRest } of collectBindingIdentifiers(parent.id)) {
+                        for (const { name, isRest } of collectBindingIdentifiers(parent)) {
                             if (isRest) {
                                 defineProps.destructuredRest = name;
                             }
@@ -337,17 +337,4 @@ function getStatementRange(node: Node, parents: Node[]) {
         }
     }
     return statementRange ?? getRange(node);
-}
-
-function isFunctionLike(node: Node) {
-    return (
-        node.type === "ArrowFunctionExpression" ||
-        node.type === "FunctionDeclaration" ||
-        node.type === "FunctionExpression" ||
-        node.type === "MethodDefinition"
-    );
-}
-
-function isStatement(node: Node) {
-    return node.type.endsWith("Statement") || node.type.endsWith("Declaration");
 }
