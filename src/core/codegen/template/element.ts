@@ -305,7 +305,11 @@ export function* generateFragment(
 
     // special case for <template v-for="..." :key="..." />
     if (node.props.length) {
-        yield `__VLS_asFunctionalElement(__VLS_intrinsics.template)(`;
+        yield `${
+            options.vueCompilerOptions.checkUnknownProps
+                ? "__VLS_asFunctionalElement0"
+                : "__VLS_asFunctionalElement1"
+        }(__VLS_intrinsics.template)(`;
         const boundary = yield* generateBoundary("template", startTagOffset, codeFeatures.verification);
         yield `{${newLine}`;
         yield* generateElementProps(

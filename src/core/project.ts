@@ -9,18 +9,17 @@ import picomatch from "picomatch";
 import { glob } from "tinyglobby";
 import { parse } from "tsconfck";
 import { $ } from "zx";
+import type { TSConfig } from "pkg-types";
 import packageJson from "../../package.json";
 import { createSourceFile, type SourceFile } from "./codegen";
 import { createCompilerOptionsBuilder } from "./compilerOptions";
 import type { CodeInformation } from "./types";
 
 export interface Project {
-    getSourceFile: (fileName: string) => SourceFile | undefined;
     check: () => Promise<boolean>;
 }
 
 export async function createProject(configPath: string): Promise<Project> {
-    const parsed = await parse(configPath);
     const configRoot = dirname(configPath);
     const configHash = createHash("sha256").update(configPath).digest("hex").slice(0, 8);
 
@@ -31,6 +30,7 @@ export async function createProject(configPath: string): Promise<Project> {
         throw new Error("[Vue] Failed to find a cache directory.");
     }
 
+    const parsed = await parse(configPath);
     const builder = createCompilerOptionsBuilder();
     const resolver = new ResolverFactory({
         tsconfig: {
@@ -45,28 +45,24 @@ export async function createProject(configPath: string): Promise<Project> {
         }
     }
     const vueCompilerOptions = builder.build();
-    const sourceToFileMap = new Map<string, SourceFile>();
-    const targetToFileMap = new Map<string, SourceFile>();
 
     const includes = await resolveFiles(parsed.tsconfig, configRoot);
-    const includeSet = new Set(Object.values(includes).flat());
-    const mutualRoot = getMutualRoot(Object.keys(includes), configRoot);
-    const toTargetPath = (path: string) => join(cacheRoot, relative(mutualRoot, path));
+    const sourceToFiles = new Map<string, SourceFile>();
+    const targetToFiles = new Map<string, SourceFile>();
 
-    for (const path of includeSet) {
-        if (sourceToFileMap.has(path)) {
+    for (const path of includes) {
+        if (sourceToFiles.has(path)) {
             continue;
         }
 
         const sourceText = await readFile(path, "utf-8").catch(() => void 0);
         if (sourceText === void 0) {
-            includeSet.delete(path);
+            includes.delete(path);
             continue;
         }
 
-        const sourceFile = createSourceFile(path, toTargetPath(path), sourceText, vueCompilerOptions);
-        sourceToFileMap.set(path, sourceFile);
-        targetToFileMap.set(sourceFile.targetPath, sourceFile);
+        const sourceFile = createSourceFile(path, sourceText, vueCompilerOptions);
+        sourceToFiles.set(path, sourceFile);
 
         for (const specifier of [
             ...sourceFile.imports,
@@ -76,43 +72,61 @@ export async function createProject(configPath: string): Promise<Project> {
             if (result?.path === void 0 || result.path.includes("/node_modules/")) {
                 continue;
             }
-            includeSet.add(result.path);
+            includes.add(result.path);
         }
     }
 
-    function getSourceFile(fileName: string) {
-        return sourceToFileMap.get(fileName);
+    const mutualRoot = getMutualRoot(includes, configRoot);
+    const toSourcePath = (path: string) => join(mutualRoot, relative(cacheRoot, path));
+    const toTargetPath = (path: string) => join(cacheRoot, relative(mutualRoot, path));
+
+    for (const path of includes) {
+        const sourceFile = sourceToFiles.get(path)!;
+        const targetPath = sourceFile.type === "virtual"
+            ? toTargetPath(path) + `.${sourceFile.virtualLang}`
+            : toTargetPath(path);
+        targetToFiles.set(targetPath, sourceFile);
     }
 
     async function generate() {
         await rm(cacheRoot, { recursive: true, force: true });
         await mkdir(cacheRoot, { recursive: true });
 
-        for (const path of includeSet) {
-            const sourceFile = getSourceFile(path)!;
-            await mkdir(dirname(sourceFile.targetPath), { recursive: true });
+        for (const path of includes) {
+            const sourceFile = sourceToFiles.get(path)!;
+            const targetPath = sourceFile.type === "virtual"
+                ? toTargetPath(path) + `.${sourceFile.virtualLang}`
+                : toTargetPath(path);
+
+            await mkdir(dirname(targetPath), { recursive: true });
             await writeFile(
-                sourceFile.targetPath,
+                targetPath,
                 sourceFile.type === "virtual" ? sourceFile.virtualText : sourceFile.sourceText,
             );
         }
 
+        const types: string[] = ["template-helpers.d.ts"];
+        if (!vueCompilerOptions.checkUnknownProps) {
+            types.push("props-fallback.d.ts");
+        }
+        if (vueCompilerOptions.lib === "vue" && vueCompilerOptions.target < 3.5) {
+            types.push("vue-3.4-shims.d.ts");
+        }
+
         const targetConfigPath = toTargetPath(configPath);
-        const targetConfig = {
+        const targetConfig: TSConfig = {
             ...parsed.tsconfig,
+            compilerOptions: {
+                ...parsed.tsconfig.compilerOptions,
+                types: [
+                    ...parsed.tsconfig.compilerOptions?.types ?? [],
+                    ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
+                ],
+            },
             extends: void 0,
         };
         await mkdir(dirname(targetConfigPath), { recursive: true });
         await writeFile(targetConfigPath, JSON.stringify(targetConfig, null, 2));
-
-        if (dirname(targetConfigPath) !== cacheRoot) {
-            const stubConfigPath = join(cacheRoot, "tsconfig.json");
-            const stubConfig = {
-                references: [{ path: "./" + relative(cacheRoot, targetConfigPath) }],
-                files: [],
-            };
-            await writeFile(stubConfigPath, JSON.stringify(stubConfig, null, 2));
-        }
 
         for (const path of [
             join(mutualRoot, "package.json"),
@@ -139,7 +153,7 @@ export async function createProject(configPath: string): Promise<Project> {
         const stats: { path: string; line: number; count: number }[] = [];
 
         for (const [originalPath, diagnostics] of Object.entries(groups)) {
-            const sourceFile = targetToFileMap.get(originalPath);
+            const sourceFile = targetToFiles.get(originalPath);
             let sourcePath = sourceFile?.sourcePath;
 
             outer: for (let i = 0; i < diagnostics.length; i++) {
@@ -147,7 +161,7 @@ export async function createProject(configPath: string): Promise<Project> {
 
                 if (!sourceFile || sourceFile.type === "native") {
                     if (originalPath.startsWith(cacheRoot)) {
-                        sourcePath ??= originalPath.replace(cacheRoot, mutualRoot);
+                        sourcePath ??= toSourcePath(originalPath);
                     }
                     continue;
                 }
@@ -222,45 +236,41 @@ export async function createProject(configPath: string): Promise<Project> {
     }
 
     return {
-        getSourceFile,
         check,
     };
 }
 
-async function resolveFiles(config: any, configRoot: string) {
+async function resolveFiles(config: TSConfig, configRoot: string) {
+    const includes = await Promise.all(
+        config.include?.map(async (pattern) => {
+            const originalKey = pattern;
+
+            if (!pattern.includes("*")) {
+                pattern = await transformPattern(pattern);
+                if (originalKey === pattern) {
+                    return join(configRoot, pattern);
+                }
+            }
+
+            return glob(pattern, {
+                absolute: true,
+                cwd: configRoot,
+                ignore: "**/node_modules/**",
+            });
+        }) ?? [],
+    );
+
     const excludes = await Promise.all(
         config.exclude?.map(async (pattern: string) => (
             join(configRoot, pattern.includes("*") ? pattern : await transformPattern(pattern))
+        )) ?? [],
+    );
+
+    return new Set(
+        includes.flat().filter((path) => (
+            excludes.every((pattern) => !picomatch.isMatch(path, pattern))
         )),
     );
-
-    return Object.fromEntries<string[]>(
-        await Promise.all(config.include?.map(resolve)),
-    );
-
-    async function resolve(pattern: string) {
-        const originalKey = pattern;
-        let files: string[];
-
-        if (!pattern.includes("*")) {
-            pattern = await transformPattern(pattern);
-            if (originalKey === pattern) {
-                files = [join(configRoot, pattern)];
-            }
-        }
-
-        files ??= await glob(pattern, {
-            absolute: true,
-            cwd: configRoot,
-            ignore: "**/node_modules/**",
-        });
-
-        return [originalKey, files.filter(filter)];
-    }
-
-    function filter(path: string) {
-        return !excludes.some((pattern) => picomatch.isMatch(path, pattern));
-    }
 
     async function transformPattern(pattern: string) {
         try {
@@ -275,19 +285,19 @@ async function resolveFiles(config: any, configRoot: string) {
     }
 }
 
-function getMutualRoot(patterns: string[], configRoot: string) {
-    let upwardLevel = 0;
-    for (let pattern of patterns) {
-        let level = 0;
-        while (pattern.startsWith("../")) {
-            pattern = pattern.slice(3);
-            level++;
-        }
-        if (upwardLevel < level) {
-            upwardLevel = level;
+function getMutualRoot(includes: Set<string>, configRoot: string) {
+    let mutual: string[] = configRoot.split("/");
+
+    for (const path of includes) {
+        const segment = path.split("/");
+        for (let i = 0; i < mutual.length; i++) {
+            if (mutual[i] !== segment[i]) {
+                mutual = mutual.slice(0, i);
+                break;
+            }
         }
     }
-    return join(configRoot, ...Array.from({ length: upwardLevel }, () => ".."));
+    return mutual.join("/");
 }
 
 function isVerificationEnabled(data: CodeInformation, code: number) {

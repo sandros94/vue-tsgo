@@ -1,4 +1,3 @@
-import { dirname, isAbsolute, relative } from "pathe";
 import type { VueCompilerOptions } from "@vue/language-core";
 import { codeFeatures } from "../codeFeatures";
 import { names } from "../names";
@@ -15,7 +14,6 @@ import type { ScriptSetupRanges } from "../ranges/scriptSetup";
 export interface ScriptCodegenOptions {
     vueCompilerOptions: VueCompilerOptions;
     sourcePath: string;
-    targetPath: string;
     script?: IRScript;
     scriptSetup?: IRScriptSetup;
     scriptRanges?: ScriptRanges;
@@ -43,8 +41,6 @@ function* generateScript(
     ctx: ScriptCodegenContext,
 ): Generator<Code> {
     const { vueCompilerOptions, script, scriptSetup, scriptRanges, scriptSetupRanges } = options;
-
-    yield* generateGlobalTypesReference(options.vueCompilerOptions, options.targetPath);
 
     // <script src="...">
     if (typeof script?.attrs.src === "object") {
@@ -177,36 +173,6 @@ function* generateScript(
     }
 
     yield* ctx.localTypes.generate();
-}
-
-function* generateGlobalTypesReference(
-    options: VueCompilerOptions,
-    fileName: string,
-): Generator<Code> {
-    const { target, lib, typesRoot, checkUnknownProps } = options;
-
-    let typesPath: string;
-    if (isAbsolute(typesRoot)) {
-        let relativePath = relative(dirname(fileName), typesRoot);
-        if (
-            relativePath !== typesRoot
-            && !relativePath.startsWith("./")
-            && !relativePath.startsWith("../")
-        ) {
-            relativePath = "./" + relativePath;
-        }
-        typesPath = relativePath;
-    }
-    else {
-        typesPath = typesRoot;
-    }
-    yield `/// <reference types=${JSON.stringify(typesPath + "/template-helpers.d.ts")} />${newLine}`;
-    if (!checkUnknownProps) {
-        yield `/// <reference types=${JSON.stringify(typesPath + "/props-fallback.d.ts")} />${newLine}`;
-    }
-    if (lib === "vue" && target < 3.5) {
-        yield `/// <reference types=${JSON.stringify(typesPath + "/vue-3.4-shims.d.ts")} />${newLine}`;
-    }
 }
 
 function* generateScriptWithExportDefault(

@@ -15,7 +15,6 @@ import type { Code, CodeInformation } from "../types";
 
 interface File {
     sourcePath: string;
-    targetPath: string;
     sourceText: string;
     imports: string[];
     references: string[];
@@ -40,13 +39,12 @@ const referenceRE = /\/\/\/\s*<reference\s+path=["'](.*?)["']\s*\/>/g;
 
 export function createSourceFile(
     sourcePath: string,
-    targetPath: string,
     sourceText: string,
     vueCompilerOptions: VueCompilerOptions,
 ) {
     const sourceFile = vueCompilerOptions.extensions.some((ext) => sourcePath.endsWith(ext))
-        ? createVirtualFile(sourcePath, targetPath, sourceText, vueCompilerOptions)
-        : createNativeFile(sourcePath, targetPath, sourceText);
+        ? createVirtualFile(sourcePath, sourceText, vueCompilerOptions)
+        : createNativeFile(sourcePath, sourceText);
 
     for (const item of findStaticImports(sourceText)) {
         sourceFile.imports.push(item.specifier);
@@ -63,13 +61,11 @@ export function createSourceFile(
 
 function createVirtualFile(
     sourcePath: string,
-    targetPath: string,
     sourceText: string,
     vueCompilerOptions: VueCompilerOptions,
 ): SourceFile {
     const ir = createIR(sourcePath, sourceText);
     const virtualLang = ir.scriptSetup?.lang ?? ir.script?.lang ?? "ts";
-    targetPath += `.${virtualLang}`;
 
     // #region vueCompilerOptions
     const options = parseLocalCompilerOptions(ir.comments);
@@ -206,7 +202,6 @@ function createVirtualFile(
     const generatedScript = generateScript({
         vueCompilerOptions,
         sourcePath,
-        targetPath,
         script: ir.script,
         scriptSetup: ir.scriptSetup,
         scriptRanges,
@@ -262,7 +257,6 @@ function createVirtualFile(
     return {
         type: "virtual",
         sourcePath,
-        targetPath,
         sourceText,
         virtualText,
         virtualLang,
@@ -274,11 +268,10 @@ function createVirtualFile(
     };
 }
 
-function createNativeFile(sourcePath: string, targetPath: string, sourceText: string): SourceFile {
+function createNativeFile(sourcePath: string, sourceText: string): SourceFile {
     return {
         type: "native",
         sourcePath,
-        targetPath,
         sourceText,
         imports: [],
         references: [],

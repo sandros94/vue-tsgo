@@ -1,7 +1,7 @@
 {
   "name": "vue-tsgo",
   "type": "module",
-  "version": "0.0.1-yggdrasill.3",
+  "version": "0.0.1-yggdrasill.4",
   "packageManager": "pnpm@10.28.0",
   "description": "Type checker for Vue SFCs with TypeScript 7 integration",
   "author": "KazariEX",
@@ -57,6 +57,7 @@
     "@zinkawaii/tsconfig": "catalog:",
     "bumpp": "catalog:",
     "eslint": "catalog:",
+    "pkg-types": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   }

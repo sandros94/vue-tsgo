@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { getDefaultCompilerOptions, type RawVueCompilerOptions, type VueCompilerOptions } from "@vue/language-core";
 import { camelize } from "@vue/shared";
 import resolver from "oxc-resolver";
-import { isAbsolute, join } from "pathe";
 import { hyphenateTag } from "./shared";
 
 const syntaxRE = /^\s*@(?<key>\w+)\b(?<value>.+)/m;
@@ -28,7 +27,6 @@ export function parseLocalCompilerOptions(comments: string[]) {
 export function createCompilerOptionsBuilder() {
     const resolved: Omit<RawVueCompilerOptions, "target" | "strictTemplates" | "typesRoot" | "plugins"> = {};
     let target: number | undefined;
-    let typesRoot: string | undefined;
 
     function add(options: RawVueCompilerOptions, rootDir: string) {
         for (const key in options) {
@@ -51,17 +49,6 @@ export function createCompilerOptionsBuilder() {
                     resolved.checkUnknownComponents ??= strict;
                     break;
                 }
-                case "typesRoot": {
-                    if (options[key] !== void 0) {
-                        if (isAbsolute(options[key])) {
-                            typesRoot = options[key];
-                        }
-                        else {
-                            typesRoot = join(rootDir, options[key]);
-                        }
-                    }
-                    break;
-                }
                 default: {
                     // @ts-expect-error ...
                     resolved[key] = options[key];
@@ -75,12 +62,7 @@ export function createCompilerOptionsBuilder() {
         }
     }
 
-    function build(defaults = getDefaultCompilerOptions(
-        target,
-        resolved.lib,
-        void 0,
-        typesRoot,
-    )): VueCompilerOptions {
+    function build(defaults = getDefaultCompilerOptions(target, resolved.lib)): VueCompilerOptions {
         return {
             ...defaults,
             ...resolved,
