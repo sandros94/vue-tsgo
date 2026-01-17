@@ -32,7 +32,5 @@ export const cli = Cli()
         }
 
         const project = await createProject(configPath);
-        if (!await project.check()) {
-            process.exit(1);
-        }
+        await project.runTsgo();
     });

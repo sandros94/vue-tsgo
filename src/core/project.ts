@@ -207,7 +207,7 @@ export async function createProject(configPath: string): Promise<Project> {
                     const columnStart = i === 0 ? start.column - 1 : 0;
                     const columnEnd = i === printedLines.length - 1 ? end.column - 1 : line.length;
 
-                    console.info(`\x1B[7m${start.line + i}\x1B[0m ${line}`);
+                    console.info(`\x1B[7m${String(start.line + i).padStart(padding, " ")}\x1B[0m ${line}`);
                     console.info(`\x1B[7m${" ".repeat(padding)}\x1B[0m ${" ".repeat(columnStart)}${styleText("redBright", "~".repeat(columnEnd - columnStart))}\n`);
                 }
             }
