@@ -357,7 +357,7 @@ function parseStdout(stdout: string) {
             }
             else if (text.startsWith("Found ")) {
                 i += 3;
-                while (lines[i].length) {
+                while (lines[i]?.length) {
                     i++;
                 }
                 break;
