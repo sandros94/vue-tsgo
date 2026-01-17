@@ -115,6 +115,7 @@ export function* generateElementProps(
             const boundary = yield* generateBoundary(
                 "template",
                 prop.loc.start.offset,
+                prop.loc.end.offset,
                 codeFeatures.verification,
             );
             if (prop.arg) {
@@ -131,17 +132,23 @@ export function* generateElementProps(
                 const boundary = yield* generateBoundary(
                     "template",
                     prop.loc.start.offset,
+                    prop.loc.start.offset + "v-model".length,
                     codeFeatures.verification,
                 );
                 yield propName;
-                yield boundary.end(prop.loc.start.offset + "v-model".length);
+                yield boundary.end();
             }
             yield `: `;
             const argLoc = prop.arg?.loc ?? prop.loc;
-            const boundary2 = yield* generateBoundary("template", argLoc.start.offset, codeFeatures.verification);
+            const boundary2 = yield* generateBoundary(
+                "template",
+                argLoc.start.offset,
+                argLoc.end.offset,
+                codeFeatures.verification,
+            );
             yield* generatePropExp(options, ctx, prop, prop.exp);
-            yield boundary2.end(argLoc.end.offset);
-            yield boundary.end(prop.loc.end.offset);
+            yield boundary2.end();
+            yield boundary.end();
             if (shouldSpread) {
                 yield ` }`;
             }
@@ -172,6 +179,7 @@ export function* generateElementProps(
             const boundary = yield* generateBoundary(
                 "template",
                 prop.loc.start.offset,
+                prop.loc.end.offset,
                 codeFeatures.verification,
             );
             yield* generateObjectProperty(
@@ -192,7 +200,7 @@ export function* generateElementProps(
             else {
                 yield `true`;
             }
-            yield boundary.end(prop.loc.end.offset);
+            yield boundary.end();
             if (shouldSpread) {
                 yield ` }`;
             }
@@ -209,11 +217,12 @@ export function* generateElementProps(
                 const boundary = yield* generateBoundary(
                     "template",
                     prop.loc.start.offset,
+                    prop.exp.loc.end.offset,
                     codeFeatures.verification,
                 );
                 yield `...`;
                 yield* generatePropExp(options, ctx, prop, prop.exp);
-                yield boundary.end(prop.exp.loc.end.offset);
+                yield boundary.end();
                 yield `,${newLine}`;
             }
         }

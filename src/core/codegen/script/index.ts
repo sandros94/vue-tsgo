@@ -53,7 +53,12 @@ function* generateScript(
         }
 
         yield `import ${names.export} from `;
-        const boundary = yield* generateBoundary("main", offset, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "main",
+            offset,
+            offset + text.length,
+            codeFeatures.verification,
+        );
         yield `"`;
         yield [
             text.slice(0, text.length),
@@ -63,7 +68,7 @@ function* generateScript(
         ];
         yield text.slice(text.length);
         yield `"`;
-        yield boundary.end(offset + text.length);
+        yield boundary.end();
         yield endOfLine;
         yield `export default {} as typeof ${names.export}${endOfLine}`;
     }
@@ -211,8 +216,13 @@ function* generateScriptWithExportDefault(
 
 function* generateExportDeclareEqual(block: IRBlock, name: string): Generator<Code> {
     yield `const `;
-    const boundary = yield* generateBoundary(block.name, 0, codeFeatures.doNotReportTs6133);
+    const boundary = yield* generateBoundary(
+        block.name,
+        0,
+        block.content.length,
+        codeFeatures.doNotReportTs6133,
+    );
     yield name;
-    yield boundary.end(block.content.length);
+    yield boundary.end();
     yield ` = `;
 }

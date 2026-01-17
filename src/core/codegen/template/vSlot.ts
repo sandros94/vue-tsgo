@@ -141,11 +141,16 @@ function* generateSlotParameters(
 
     if (types.some((t) => t)) {
         yield `, `;
-        const boundary = yield* generateBoundary("template", exp.loc.start.offset, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "template",
+            exp.loc.start.offset,
+            exp.loc.end.offset,
+            codeFeatures.verification,
+        );
         yield `(`;
         yield* types.flatMap((type) => (type ? [`_`, type, `, `] : `_, `));
         yield `) => {}`;
-        yield boundary.end(exp.loc.end.offset);
+        yield boundary.end();
     }
     yield `)${endOfLine}`;
 

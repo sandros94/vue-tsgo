@@ -4,7 +4,7 @@ import { codeFeatures } from "../codeFeatures";
 import { names } from "../names";
 import { endOfLine, newLine } from "../utils";
 import { generateBoundary } from "../utils/boundary";
-import { generateElementProps } from "./elementProps";
+import { generateElementProps, generatePropExp } from "./elementProps";
 import { generateInterpolation } from "./interpolation";
 import { generatePropertyAccess } from "./propertyAccess";
 import { generateTemplateChild } from "./templateChild";
@@ -47,6 +47,12 @@ export function* generateSlotOutlet(
             ) {
                 codes = [
                     `[`,
+                    ...generatePropExp(
+                        options,
+                        ctx,
+                        nameProp,
+                        nameProp.exp,
+                    ),
                     `]`,
                 ];
             }
@@ -54,22 +60,41 @@ export function* generateSlotOutlet(
                 codes = [`["default"]`];
             }
 
-            const boundary = yield* generateBoundary("template", tagLocStart, codeFeatures.verification);
+            const boundary = yield* generateBoundary(
+                "template",
+                nameProp.loc.start.offset,
+                nameProp.loc.end.offset,
+                codeFeatures.verification,
+            );
             yield options.slotsAssignName ?? names.slots;
             yield* codes;
-            yield boundary.end(nameProp.loc.end.offset);
+            yield boundary.end();
         }
         else {
-            const boundary = yield* generateBoundary("template", tagLocStart, codeFeatures.verification);
+            const boundary = yield* generateBoundary(
+                "template",
+                tagLocStart,
+                tagLocEnd,
+                codeFeatures.verification,
+            );
             yield `${options.slotsAssignName ?? names.slots}[`;
-            const boundary2 = yield* generateBoundary("template", tagLocStart, codeFeatures.verification);
-            yield `"default"`;
-            yield boundary2.end(tagLocEnd);
+            yield* generateBoundary(
+                "template",
+                tagLocStart,
+                tagLocEnd,
+                codeFeatures.verification,
+                `"default"`,
+            );
             yield `]`;
-            yield boundary.end(tagLocEnd);
+            yield boundary.end();
         }
         yield `)(`;
-        const boundary = yield* generateBoundary("template", tagLocStart, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "template",
+            tagLocStart,
+            tagLocEnd,
+            codeFeatures.verification,
+        );
         yield `{${newLine}`;
         yield* generateElementProps(
             options,
@@ -79,7 +104,7 @@ export function* generateSlotOutlet(
             true,
         );
         yield `}`;
-        yield boundary.end(tagLocEnd);
+        yield boundary.end();
         yield `)${endOfLine}`;
     }
     else {

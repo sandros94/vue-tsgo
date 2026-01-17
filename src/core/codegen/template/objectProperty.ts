@@ -46,11 +46,11 @@ export function* generateObjectProperty(
             yield* generateCamelized(code, "template", offset, features);
         }
         else {
-            const boundary = yield* generateBoundary("template", offset, features);
+            const boundary = yield* generateBoundary("template", offset, offset + code.length, features);
             yield `"`;
             yield* generateCamelized(code, "template", offset, { __combineToken: boundary.token });
             yield `"`;
-            yield boundary.end(offset + code.length);
+            yield boundary.end();
         }
     }
     else if (identifierRE.test(code)) {

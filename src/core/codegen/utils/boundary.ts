@@ -3,10 +3,11 @@ import type { Code, CodeInformation } from "../../types";
 export function generateBoundary(
     source: string,
     start: number,
+    end: number,
     features: CodeInformation,
 ): Generator<Code, {
     token: symbol;
-    end: (offset: number) => Code;
+    end: () => Code;
 }>;
 
 export function generateBoundary(
@@ -15,27 +16,26 @@ export function generateBoundary(
     end: number,
     features: CodeInformation,
     ...codes: Code[]
-): Generator<Code>;
+): Generator<Code, void>;
 
 export function* generateBoundary(
     source: string,
     start: number,
-    ...args:
-        | [features: CodeInformation]
-        | [end: number, features: CodeInformation, ...Code[]]
+    end: number,
+    features: CodeInformation,
+    ...codes: Code[]
 ): Generator<Code> {
     const token = Symbol(source);
+    yield ["", source, start, { ...features, __combineToken: token }];
 
-    if (typeof args[0] === "object") {
-        yield ["", source, start, { ...args[0], __combineToken: token }];
-        return {
-            token,
-            end: (offset: number) => ["", source, offset, { __combineToken: token }],
-        };
+    if (codes.length) {
+        yield* codes;
+        yield ["", source, end, { __combineToken: token }];
     }
     else {
-        yield ["", source, start, { ...args[1], __combineToken: token }];
-        yield* args.slice(2) as Code[];
-        yield ["", source, args[0], { __combineToken: token }];
+        return {
+            token,
+            end: () => ["", source, end, { __combineToken: token }],
+        };
     }
 }

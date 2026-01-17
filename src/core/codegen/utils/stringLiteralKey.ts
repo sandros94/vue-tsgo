@@ -10,10 +10,10 @@ export function* generateStringLiteralKey(
         yield `"${code}"`;
     }
     else {
-        const boundary = yield* generateBoundary("template", offset, features);
+        const boundary = yield* generateBoundary("template", offset, offset + code.length, features);
         yield `"`;
         yield [code, "template", offset, { __combineToken: boundary.token }];
         yield `"`;
-        yield boundary.end(offset + code.length);
+        yield boundary.end();
     }
 }

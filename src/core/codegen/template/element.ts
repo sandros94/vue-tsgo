@@ -161,19 +161,29 @@ export function* generateComponent(
 
     if (ctx.currentInfo.generic) {
         const { content, offset } = ctx.currentInfo.generic;
-        const boundary = yield* generateBoundary("template", offset, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "template",
+            offset,
+            offset + content.length,
+            codeFeatures.verification,
+        );
         yield `<`;
         yield [content, "template", offset, { __combineToken: boundary.token }];
         yield `>`;
-        yield boundary.end(offset + content.length);
+        yield boundary.end();
     }
 
     yield `(`;
-    const boundary = yield* generateBoundary("component", startTagOffset, codeFeatures.verification);
+    const boundary = yield* generateBoundary(
+        "component",
+        startTagOffset,
+        startTagOffset + tag.length,
+        codeFeatures.verification,
+    );
     yield `{${newLine}`;
     yield* propCodes;
     yield `}`;
-    yield boundary.end(startTagOffset + tag.length);
+    yield boundary.end();
     yield `, ...__VLS_functionalComponentArgsRest(${functionalVar}))${endOfLine}`;
 
     yield* generateFailedExpressions(options, ctx, failedExpressionInfos);
@@ -257,7 +267,12 @@ export function* generateElement(
         );
     }
     yield `)(`;
-    const boundary = yield* generateBoundary("element", startTagOffset, codeFeatures.verification);
+    const boundary = yield* generateBoundary(
+        "element",
+        startTagOffset,
+        startTagOffset + node.tag.length,
+        codeFeatures.verification,
+    );
     yield `{${newLine}`;
     yield* generateElementProps(
         options,
@@ -268,7 +283,7 @@ export function* generateElement(
         failedExpressionInfos,
     );
     yield `}`;
-    yield boundary.end(startTagOffset + node.tag.length);
+    yield boundary.end();
     yield `)${endOfLine}`;
 
     yield* generateFailedExpressions(options, ctx, failedExpressionInfos);
@@ -310,7 +325,12 @@ export function* generateFragment(
                 ? "__VLS_asFunctionalElement0"
                 : "__VLS_asFunctionalElement1"
         }(__VLS_intrinsics.template)(`;
-        const boundary = yield* generateBoundary("template", startTagOffset, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "template",
+            startTagOffset,
+            startTagOffset + node.tag.length,
+            codeFeatures.verification,
+        );
         yield `{${newLine}`;
         yield* generateElementProps(
             options,
@@ -320,7 +340,7 @@ export function* generateFragment(
             options.vueCompilerOptions.checkUnknownProps,
         );
         yield `}`;
-        yield boundary.end(startTagOffset + node.tag.length);
+        yield boundary.end();
         yield `)${endOfLine}`;
     }
 

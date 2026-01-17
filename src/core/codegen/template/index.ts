@@ -193,7 +193,7 @@ function* generateRootEl(ctx: TemplateCodegenContext): Generator<Code> {
     }
     ctx.generatedTypes.add(names.RootEl);
 
-    yield `type ${names.RootEl} = `;
+    yield `type ${names.RootEl} =`;
     for (const type of ctx.singleRootElTypes) {
         yield `${newLine}| ${type}`;
     }

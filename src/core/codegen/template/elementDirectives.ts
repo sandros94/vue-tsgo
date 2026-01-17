@@ -37,7 +37,12 @@ export function* generateElementDirectives(
         ) {
             continue;
         }
-        const boundary = yield* generateBoundary("template", prop.loc.start.offset, codeFeatures.verification);
+        const boundary = yield* generateBoundary(
+            "template",
+            prop.loc.start.offset,
+            prop.loc.end.offset,
+            codeFeatures.verification,
+        );
         yield `__VLS_asFunctionalDirective(`;
         yield* generateIdentifier(options, ctx, prop);
         yield `, {} as import("${options.vueCompilerOptions.lib}").ObjectDirective)(null!, { ...__VLS_directiveBindingRestFields, `;
@@ -45,7 +50,7 @@ export function* generateElementDirectives(
         yield* generateModifiers(options, ctx, prop);
         yield* generateValue(options, ctx, prop);
         yield ` }, null!, null!)`;
-        yield boundary.end(prop.loc.end.offset);
+        yield boundary.end();
         yield endOfLine;
     }
 }
@@ -56,8 +61,12 @@ function* generateIdentifier(
     prop: CompilerDOM.DirectiveNode,
 ): Generator<Code> {
     const rawName = "v-" + prop.name;
-    const startOffset = prop.loc.start.offset;
-    const boundary = yield* generateBoundary("template", startOffset, codeFeatures.verification);
+    const boundary = yield* generateBoundary(
+        "template",
+        prop.loc.start.offset,
+        prop.loc.start.offset + rawName.length,
+        codeFeatures.verification,
+    );
     yield names.directives;
     yield `.`;
     yield* generateCamelized(
@@ -69,7 +78,7 @@ function* generateIdentifier(
     if (!builtInDirectives.has(prop.name)) {
         ctx.accessVariable(camelize(rawName));
     }
-    yield boundary.end(startOffset + rawName.length);
+    yield boundary.end();
 }
 
 function* generateArg(

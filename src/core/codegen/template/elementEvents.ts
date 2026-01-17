@@ -84,20 +84,19 @@ export function* generateEventArg(
     if (prefix.length) {
         name = capitalize(name);
     }
+
+    const boundary = yield* generateBoundary("template", start, start + name.length, features);
     if (identifierRE.test(camelize(name))) {
-        const boundary = yield* generateBoundary("template", start, features);
         yield prefix;
         yield* generateCamelized(name, "template", start, { __combineToken: boundary.token });
-        yield boundary.end(start + name.length);
     }
     else {
-        const boundary = yield* generateBoundary("template", start, features);
         yield `"`;
         yield prefix;
         yield* generateCamelized(name, "template", start, { __combineToken: boundary.token });
         yield `"`;
-        yield boundary.end(start + name.length);
     }
+    yield boundary.end();
 }
 
 export function* generateEventExpression(
