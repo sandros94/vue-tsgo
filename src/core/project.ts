@@ -120,6 +120,7 @@ export async function createProject(configPath: string): Promise<Project> {
             const targetConfigPath = toTargetPath(configPath);
             const targetConfig: TSConfig = {
                 ...parsed.tsconfig,
+                extends: void 0,
                 compilerOptions: {
                     ...parsed.tsconfig.compilerOptions,
                     types: [
@@ -127,7 +128,7 @@ export async function createProject(configPath: string): Promise<Project> {
                         ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
                     ],
                 },
-                extends: void 0,
+                include: parsed.tsconfig.include?.map(toTargetPath),
             };
 
             await mkdir(dirname(targetConfigPath), { recursive: true });
@@ -265,13 +266,9 @@ export async function createProject(configPath: string): Promise<Project> {
 async function resolveFiles(config: TSConfig, configRoot: string) {
     const includes = await Promise.all(
         config.include?.map(async (pattern) => {
-            const originalKey = pattern;
-
+            pattern = await transformPattern(pattern);
             if (!pattern.includes("*")) {
-                pattern = await transformPattern(pattern);
-                if (originalKey === pattern) {
-                    return join(configRoot, pattern);
-                }
+                return join(configRoot, pattern);
             }
 
             return glob(pattern, {
@@ -284,7 +281,7 @@ async function resolveFiles(config: TSConfig, configRoot: string) {
 
     const excludes = await Promise.all(
         config.exclude?.map(async (pattern) => picomatch(
-            join(configRoot, pattern.includes("*") ? pattern : await transformPattern(pattern)),
+            join(configRoot, await transformPattern(pattern)),
         )) ?? [],
     );
 
@@ -293,6 +290,9 @@ async function resolveFiles(config: TSConfig, configRoot: string) {
     );
 
     async function transformPattern(pattern: string) {
+        if (pattern.includes("*")) {
+            return pattern;
+        }
         try {
             const path = join(configRoot, pattern);
             const stats = await stat(path);
