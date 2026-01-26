@@ -150,7 +150,7 @@ export async function createProject(configPath: string): Promise<Project> {
         await generate();
         const resolvedTsgo = await resolver.async(configRoot, "@typescript/native-preview/package.json");
         if (resolvedTsgo?.path === void 0) {
-            // TODO:
+            console.error(`[Vue] Failed to resolve the path of tsgo. Please ensure the @typescript/native-preview package is installed.`);
             process.exit(1);
         }
 
