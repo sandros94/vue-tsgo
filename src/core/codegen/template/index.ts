@@ -121,7 +121,6 @@ function* generateSlots(
     for (const slot of ctx.slots) {
         yield `${newLine}& { `;
         if (slot.name && slot.offset !== void 0) {
-            yield slot.name;
             yield* generateObjectProperty(
                 options,
                 ctx,
