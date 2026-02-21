@@ -164,8 +164,8 @@ export async function createProject(configPath: string): Promise<Project> {
             },
             // provide sorted file list to avoid type augments failure
             // caused by the random check order of tsgo internal logic
-            files: [...sourceToFiles.keys()]
-                .map((path) => relative(configRoot, path))
+            files: [...targetToFiles.keys()]
+                .map((path) => relative(targetRoot, path))
                 .sort(),
             include: void 0,
             exclude: void 0,
