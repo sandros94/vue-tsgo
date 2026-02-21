@@ -154,12 +154,8 @@ export async function createProject(configPath: string): Promise<Project> {
                 files: [...(parsed.tsconfig.files ?? []), ...targetToFiles.keys()]
                     .map((tp) => relative(targetConfigDir, tp))
                     .sort(),
-                include: parsed.tsconfig.include?.map((path: string) => (
-                    isAbsolute(path) ? relative(configRoot, path) : path
-                )),
-                exclude: parsed.tsconfig.exclude?.map((path: string) => (
-                    isAbsolute(path) ? relative(configRoot, path) : path
-                )),
+                include: targetToFiles.size === 0 ? parsed.tsconfig.include : void 0,
+                exclude: targetToFiles.size === 0 ? parsed.tsconfig.exclude : void 0,
             };
 
             await mkdir(dirname(targetConfigPath), { recursive: true });
