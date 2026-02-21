@@ -163,7 +163,7 @@ export async function createProject(configPath: string): Promise<Project> {
                 ],
             },
             // provide a explicit file list to avoid potential edge cases of path resolution
-            files: [...targetToFiles.keys()].map((path) => relative(tsconfigDir, path)),
+            files: [...targetToFiles.keys()].map((path) => relative(tsconfigDir, path)).sort(),
             include: void 0,
             exclude: void 0,
         };
