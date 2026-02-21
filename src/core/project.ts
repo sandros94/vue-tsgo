@@ -162,11 +162,7 @@ export async function createProject(configPath: string): Promise<Project> {
                     ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
                 ],
             },
-            // provide sorted file list to avoid type augments failure
-            // caused by the random check order of tsgo internal logic
-            files: [...targetToFiles.keys()]
-                .map((path) => relative(tsconfigDir, path))
-                .sort(),
+            files: [...targetToFiles.keys()].map((path) => relative(tsconfigDir, path)),
             include: void 0,
             exclude: void 0,
         };
