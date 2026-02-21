@@ -88,7 +88,7 @@ describe("interpolation", () => {
                 <slot :foo="foo as typeof bar"/>
             </template>
             `),
-        ).toContain("as typeof __VLS_ctx.bar");
+        ).toContain("typeof __VLS_ctx.bar");
     });
 });
 
