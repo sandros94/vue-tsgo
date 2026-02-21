@@ -151,7 +151,7 @@ export async function createProject(configPath: string): Promise<Project> {
                         ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
                     ],
                 },
-                files: [...targetToFiles.keys()]
+                files: [...(parsed.tsconfig.files ?? []), ...targetToFiles.keys()]
                     .map((tp) => relative(targetConfigDir, tp))
                     .sort(),
                 include: parsed.tsconfig.include?.map((path: string) => (
