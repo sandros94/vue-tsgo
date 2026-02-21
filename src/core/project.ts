@@ -139,6 +139,7 @@ export async function createProject(configPath: string): Promise<Project> {
             }
 
             const targetConfigPath = toTargetPath(configPath);
+            const targetConfigDir = dirname(targetConfigPath);
             const targetConfig: TSConfig = {
                 ...parsed.tsconfig,
                 extends: void 0,
@@ -150,6 +151,9 @@ export async function createProject(configPath: string): Promise<Project> {
                         ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
                     ],
                 },
+                files: [...targetToFiles.keys()]
+                    .map((tp) => relative(targetConfigDir, tp))
+                    .sort(),
                 include: parsed.tsconfig.include?.map((path: string) => (
                     isAbsolute(path) ? relative(configRoot, path) : path
                 )),
