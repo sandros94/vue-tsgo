@@ -149,9 +149,9 @@ export async function createProject(configPath: string): Promise<Project> {
             }
         }
 
-        const targetConfigPath = toTargetPath(configPath);
-        const targetConfigDir = dirname(targetConfigPath);
-        const targetConfig: TSConfig = {
+        const tsconfigPath = toTargetPath(configPath);
+        const tsconfigDir = dirname(tsconfigPath);
+        const tsconfig: TSConfig = {
             ...parsed.tsconfig,
             extends: void 0,
             compilerOptions: {
@@ -162,11 +162,13 @@ export async function createProject(configPath: string): Promise<Project> {
                     ...types.map((name) => join(vueCompilerOptions.typesRoot, name)),
                 ],
             },
-            files: [...(parsed.tsconfig.files ?? []), ...targetToFiles.keys()]
-                .map((tp) => relative(targetConfigDir, tp))
+            // provide sorted file list to avoid type augments failure
+            // caused by the random check order of tsgo internal logic
+            files: [...sourceToFiles.keys()]
+                .map((path) => relative(configRoot, path))
                 .sort(),
-            include: targetToFiles.size === 0 ? parsed.tsconfig.include : void 0,
-            exclude: targetToFiles.size === 0 ? parsed.tsconfig.exclude : void 0,
+            include: void 0,
+            exclude: void 0,
         };
 
         // pre-collect and create all target directories
@@ -174,8 +176,8 @@ export async function createProject(configPath: string): Promise<Project> {
         const tasks: (() => Promise<void>)[] = [];
 
         // 1. tsconfig
-        dirs.add(dirname(targetConfigPath));
-        tasks.push(() => writeFile(targetConfigPath, JSON.stringify(targetConfig, null, 2)));
+        dirs.add(tsconfigDir);
+        tasks.push(() => writeFile(tsconfigPath, JSON.stringify(tsconfig, null, 2)));
 
         // 2. source files
         for (const path of includes) {
